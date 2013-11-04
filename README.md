@@ -9,7 +9,7 @@ Collaborative Filtering Recommender System
 (Implementation Details)
 ==============================================
 
-	For this project we have a dataset that contains 100,000 movie ratings. These are real ratings by real people gathered by the Group Lens research group at the University of Minnesota (http://www.grouplens.org). The dataset is made available with permission from Group Lens. 
+For this project we have a dataset that contains 100,000 movie ratings. These are real ratings by real people gathered by the Group Lens research group at the University of Minnesota (http://www.grouplens.org). The dataset is made available with permission from Group Lens. 
 The data was collected through the Movie Lens web site (movielens.umn.edu) during the seven-month period from September 19th, 1997 through April 22nd, 1998. This data has been cleaned up for users who had less than 20 ratings or did not have complete demographic information were removed from this data set.
 The ultimate goal of the project is to take a user (specified by an ID) and make movie recommendations for this user based on the rating history of this user and all the others in the provided data set
 DETAILED DESCRIPTIONS OF DATA SET
@@ -75,10 +75,9 @@ Note that if C is empty then it means that we have no basis for figuring out the
 Once similarity between users is defined as above, we can predict the rating that a user i gives to a movie m by taking the weighted average of ratings that movie m has received from users who are similar to i. Specially, for a user i and a movie m, defines the predicted rating of movie m by user i as:   
 
 
-
-			   ?j?U(Rj,m-Rj).sim(i,j)
-p(i,m)=   Ri + ----------------------------------------
-				?j?Usim(i,j)
+		                       ?j?U(Rj,m-Rj).sim(i,j)
+       p(i,m)=   Ri +        ----------------------------------
+		                            ?j?Usim(i,j)
 
                                               							
 Here U is the set of users that have rated movie m and are very similar to i. To define this more precisely, let N(j, k) be the k users that are most similar to i. Think of N(j,k) as user i's k best friends, namely those k users whose tastes in movies is closest to i's tastes. Then, for an appropriately chosen positive constant, U is the subset of users in N(i, k) that have rated movie m.
