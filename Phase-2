@@ -1,0 +1,485 @@
+import time
+from math import sqrt
+from random import randint
+
+def similiarity(u,v,userRatings):
+    '''
+    (int,int,list)->float
+
+    Takes the input userId and his neighbourID along with users rated movieList
+    and returns similiarity between two users.
+
+    >>>>
+    >>>>
+
+    '''
+    #Set of common movies rated by both the users
+    common_movies=commonElements(userRatings[u-1],userRatings[v-1])
+    #if the users u and v have no movies in common than return similiarity as 0.0
+    if not common_movies:
+        return 0.0
+    uMean=meanUserRating(u,userRatings)
+    vMean=meanUserRating(v,userRatings)
+    uStdSum=0.0
+    vStdSum=0.0
+    similiaritySum=0.0
+    for m in common_movies:
+        uRatingDiff=userRatings[u-1][m] - uMean
+        vRatingDiff=userRatings[v-1][m] -vMean
+        uStdSum=uStdSum + (uRatingDiff ** 2)
+        vStdSum=vStdSum + (vRatingDiff ** 2)
+        similiaritySum=similiaritySum + (uRatingDiff * vRatingDiff)
+
+        if((uStdSum == 0.0) or (vStdSum == 0.0)):
+            return 0.0
+
+        uStdDev=sqrt(uStdSum)
+        vStdDev=sqrt(vStdSum)
+        similiarity= similiaritySum / (uStdDev * vStdDev)
+
+        return similiarity
+
+def commonElements(S1,S2):
+
+    '''
+    (list,list)->list
+
+    Takes the list of two userRating List and then returns the list of common movies to
+    both of the users
+
+    >>>
+    >>>
+    '''
+    common=[]
+    if len(S1) <= len(S2):
+        for item in S1:
+            if item in S2:
+                common.append(item)
+    else:
+        for item in S2:
+            if item in S1:
+                common.append(item)
+
+    return common
+
+
+def kNearestNeighbours(u,userRatings,k):
+    '''
+
+     (int,list,list)->list
+        Returns the list of (user ID, similarity)-pairs for the k users who are most
+        similar to user u. The returned list of tuples is in decreasing order of
+        similarity
+    >>>
+    >>>
+
+    '''
+    nearest=[]
+    for v in range(len(userRatings)):
+        sim=similiarity(u,v,userRatings)
+        index=binarySearch(nearest,(v,sim))
+        nearest.insert(index,(v,sim))
+
+    return nearest[:k]
+
+
+def predictedRating(u, m, userRatings, friends):
+    if m in userRatings[u-1]:
+        return userRatings[u-1][m]
+    else:
+        weightedRatingSum = 0.0
+        similaritySum = 0.0
+        for friend in friends:
+            # friend is a tuple, index 0 is the ID, index 1 the similarity to u.
+            if m in userRatings[friend[0]-1]:
+                friendMean = meanUserRating(friend[0], userRatings)
+                weightedRating = ((userRatings[friend[0]-1][m] - friendMean) *
+                                  friend[1])
+                weightedRatingSum = weightedRatingSum + weightedRating
+                similaritySum = similaritySum + friend[1]
+        uMean = meanUserRating(u, userRatings)
+        if weightedRatingSum and similaritySum:
+            predicted = uMean + (weightedRatingSum / similaritySum)
+        else:
+            predicted = uMean
+        return predicted
+
+
+
+def topKMovies(u, userRatings, numMovies, k, friends):
+    top = []
+    for m in range(1, numMovies+1):
+        predicted = predictedRating(u, m, userRatings, friends)
+        index = binarySearch(top, (m, predicted))
+        top.insert(index, (m, predicted))
+    return top[:k]
+
+def binarySearch(L, tup):
+    
+    left = 0 
+    right = len(L)-1
+    if left > right:
+        return 0
+    while left <= right:
+        mid = (left + right) / 2
+        if L[mid][1] == tup[1]:
+            return mid
+        elif L[mid][1] > tup[1]:
+            left = mid + 1
+        elif L[mid][1] < tup[1]:
+            right = mid - 1
+    if L[mid][1] < tup[1]:
+        return mid
+    else:
+        return mid +1
+
+'''
+Helper Functions taken from phase-1 for creating various dataStructures
+
+'''
+def createUserList():
+    '''
+        ()->user_list[dicts]
+        
+        Reads from the file u.user and returns a list containing all demographic
+        information pertaining to the users
+
+        >>>user_list=createUserList()
+        >>>print user_list
+        >>>[{'gender': 'M', 'age': 24, 'zip': '85711', 'occupation': 'technician'},...........]
+
+    '''
+    user_list=[]
+    template=["age","gender","occupation","zip"]
+    #open the user file in read only mode
+    file=open("u.user",'r')
+    line=file.readline().rstrip()
+    while line:
+        # As long as line is non-empty, this will run. First the line is split
+        # into a list, with each element being a piece of demographic info,
+        # and the first element dropped because it is unimportant
+        
+        user_info = line.split("|")[1:]
+        
+        # Then the age (index 0) is converted to an integer.
+        
+        user_info[0] = int(user_info[0])
+        
+        # Then the dictionary for the user is created, using the template list
+        # for keys and user_info for values.
+        
+        user_dict = dict(zip(template, user_info))
+        
+        # The user_dict is appended to user_list and the next line retrieved.
+
+        user_list.append(user_dict)
+        line=file.readline().rstrip()
+
+    file.close()
+    return user_list
+
+
+def createMovieList():
+    '''
+        ()->list(dict)
+        
+        Reads from the file u.item and returns a list containing all of the info
+        pertaining to movies in the file.
+
+        >>>movie_list=createMovieList()
+        >>>print movie_list
+        >>>
+
+    '''
+
+    movie_list=[]
+    template=["title", "release date", "video release date",
+                "IMDB url", "genre"]
+    file = open("u.item", "r")
+    line = file.readline().rstrip()
+    while line:
+        # First the line is split into a list, each element being a piece
+        # of info about the movie.  The first element is dropped.
+        movie_info = line.split("|")[1:]
+        
+        # Then the genre list is built from movie_info.
+        genres = map(int, movie_info[4:])
+        
+        # The multiple genre elements of movie_info are replace with one list
+        movie_info[4:] = [genres]
+        
+        # Then the dictionary is built, using the template list for keys and
+        # the movie_info list for values
+        movie_dict = dict(zip(template, movie_info))
+        
+        # The movie_dict is appended to the movie_list and next line retrieved.
+        movie_list.append(movie_dict)
+        line = file.readline().rstrip()
+    file.close()
+    return movie_list
+
+def createRatingsList(numUsers, numMovies):
+    '''
+
+    (int,int)->(list,list)
+    
+     Reads from the file u.data and returns two lists containing all 100,000
+     ratings provided in the file.  rLu contains one element per user, with
+     that element containing all ratings from that user.  Same with rLm, but
+     each element contains all ratings for that movie.
+
+     >>>rlu,rlm=createRatingsList(943,1682)
+     >>>print rlu
+     >>>print rlm
+
+    '''
+    
+    # First rLu is initialized to a list full of empty dictionaries.
+    rLu = []
+    for i in range(numUsers):
+        rLu.append({})
+    
+    # Then rLm is initialized the same way.    
+    rLm = []
+    for i in range(numMovies):
+        rLm.append({})
+        
+    # Now the file is opened, each line read, and the data added to rLu and rLm.
+    f = open("u.data", "r")
+    line = f.readline().rstrip()
+    while line:
+        # After the line is stripped, it is split by the tab character \t.
+        # The split line has data like so: [userID, itemID, rating, timestamp]
+        # For better readability, these are given their own variable, instead
+        # of being elements in a list. They are also converted to integers.
+        userID, itemID, rating, time = map(int, line.split("\t"))
+        
+        # The rating is then stored under both the user and the item lists
+        # in the appropriate dictionary.
+        rLu[userID - 1][itemID] = rating
+        rLm[itemID - 1][userID] = rating
+        line = f.readline().rstrip()
+    f.close()
+    return rLu, rLm
+
+
+def createGenreList():
+
+    '''
+    ()->list
+
+    Reads from the file u.genre and returns a list of genres in order.
+
+    >>>genre_list=createGenreList()
+    >>>print genre_list
+
+    '''
+    
+    genre_list = []   # Initializes the genre list.
+    f = open("u.genre", "r")
+    line = f.readline().rstrip()
+    while line:
+        # For every line, the line is split into a list, with element 0 being
+        # the genre.  This is then appended to the genre_list.
+        genre = line.split("|")[0]
+        genre_list.append(genre)
+        line = f.readline().rstrip()
+    return genre_list
+
+'''
+
+After the successful creation of these data structures we perform some tests on this
+data structures like meanMovieRating,meanRating given by any user and many more
+
+'''
+ 
+def meanUserRating(userId, userRatings):
+    
+    '''
+
+    (int,list)->int
+    
+    Returns the mean rating provided by user with id u.
+    >>>ratings=meanUserRating(24,userRating)
+    >>>
+
+    '''
+    ratings = userRatings[userId - 1].values()
+    return getMean(ratings)
+
+     
+def meanMovieRating(movieId, movieRatings):
+
+    '''
+    (int,list)->int
+
+    Returns the mean rating received by a movie with id u
+    >>>mean=meanMovieRating(56,movieRating)
+    >>>print mean
+
+    '''
+     
+    ratings = movieRatings[movieId - 1].values()
+    return getMean(ratings)
+
+
+def moviesInGenre(genre, movieList):
+
+    '''
+
+    (str,list)->list
+
+    Given a genre ID and a movie list, this function returns the list
+    of all movies
+    >>>movies=moviesInGenre(romantic,movieList)
+    >>>print movies
+
+    '''
+    movie_titles = []
+    for movie in movieList:
+        # movie["genre"] is a list, and movie["genre"][genre] is either 1 
+        # (if the movie is in that genre) or 0 (movie not in genre).
+        in_genre = movie["genre"][genre]
+        if in_genre:
+            movie_titles.append(movie["title"])
+    movie_titles.sort()
+    return movie_titles
+
+#Helper Functions
+def getMean(L):
+    # Gets the mean as a float of a list L
+    mean = float(sum(L))/float(len(L))
+    return mean
+
+#Code taken from phase 3 for evaluation of the Learning Model
+
+def partitionRatings():
+    full = []   # First we initialize the full data list.
+    f = open("u.data", "r")
+    line = f.readline().rstrip()
+    # Then we scan through the file and build the full data list.
+    while line:
+        user, movie, rating, time = map(int, line.split("\t"))
+        full.append((user, movie, rating))
+        line = f.readline().rstrip()
+    f.close()
+    training = full[:]
+    test = []
+    for x in range(2000):
+        i = randint(0, len(training)-1)
+        test.append(training.pop(i))
+    return training, test
+
+def createTrainingRatingsList(rawRatings, numUsers, numItems):
+    # First rLu is initialized to a list full of empty dictionaries.
+    rLu = []
+    for i in range(numUsers):
+        rLu.append({})
+    
+    # Then rLm is initialized the same way.    
+    rLm = []
+    for i in range(numItems):
+        rLm.append({})
+        
+    # Then it will iterate through the rawRatings list, adding each rating
+    # to the appropriate user and movie dictionaries.
+    for item in rawRatings:
+        # item[0] is the user ID, item[1] the movie ID, item[2] the rating.
+        rLu[item[0] - 1][item[1]] = item[2]
+        rLm[item[1] - 1][item[0]] = item[2]
+    return rLu, rLm
+
+def evaluateCF(testSet, rLu):
+    neighborDict = buildNeighborsDict(rLu, 5)
+    actual_over_four=0.0
+    actual_over_threefive=0.0
+    predicted_over_four=0.0
+    predicted_over_threefive=0.0
+    
+    for item in testSet:
+        user = item[0]
+        movie = item[1]
+        actual_rating = item[2]
+        predicted_rating = predictedRating(user, movie, rLu, 
+                                           neighborDict[user])
+        #print predicted_rating, actual_rating
+        if actual_rating >= 4:
+            actual_over_four = actual_over_four + 1
+            if predicted_rating >= 3.5: 
+                predicted_over_threefive = predicted_over_threefive + 1
+        if predicted_rating >= 4:
+            predicted_over_four = predicted_over_four + 1
+            if actual_rating >= 3.5:
+                actual_over_threefive = actual_over_threefive + 1
+    precision = float(actual_over_threefive) / float(predicted_over_four)
+    recall = float(predicted_over_threefive) / float(actual_over_four)
+    return precision, recall
+
+def buildNeighborsDict(userRatings, n):
+    neighborsDict = {}
+    for userID in range(1, 944):
+        neighborsDict[userID] = kNearestNeighbours(userID, userRatings, n)
+    return neighborsDict
+
+def main():
+    userRatings,rLm=createRatingsList(943,1682)
+    userList=createUserList()
+    movieList=createMovieList()
+  
+    '''
+    #for i in range(1,943):
+	#for j in range(1,943):
+    		#print similiarity(i,j,userRatings)
+    for i in range(1,943):
+        friends=(kNearestNeighbours(i,userRatings,5))
+        #print predictedRating(50,500,userRatings,friends)
+        z= topKMovies(i,userRatings,1682,5,friends)
+        print "Top 5 Movies recommended for user" +str(i)
+        print "____________________________________"
+        for j in range(len(z)):
+    		print movieList[(z[j][0])]["title"]
+        print "____________________________________"
+
+    
+
+    '''
+
+    training,test=partitionRatings()
+    #print test
+    uL,mL=createTrainingRatingsList(training,943,1682)
+    #print uL
+    neighborDict = buildNeighborsDict(uL, 25)
+    #print neighborDict
+    #pre,recall=
+    pre,recall=evaluateCF(test,uL)
+    print pre * 100
+    print recall * 100
+    #print test
+
+   
+
+
+
+if __name__=='__main__':
+    main()
+    
+
+
+
+
+        
+        
+
+
+
+
+
+    
+        
+
+
+                   
+
+
+        
+    
