@@ -1,0 +1,228 @@
+def createUserList():
+    '''
+        ()->user_list[dicts]
+        
+        Reads from the file u.user and returns a list containing all demographic
+        information pertaining to the users
+
+        >>>user_list=createUserList()
+        >>>print user_list
+        >>>[{'gender': 'M', 'age': 24, 'zip': '85711', 'occupation': 'technician'},...........]
+
+    '''
+    user_list=[]
+    template=["age","gender","occupation","zip"]
+    #open the user file in read only mode
+    file=open("u.user",'r')
+    line=file.readline().rstrip()
+    while line:
+        # As long as line is non-empty, this will run. First the line is split
+        # into a list, with each element being a piece of demographic info,
+        # and the first element dropped because it is unimportant
+        
+        user_info = line.split("|")[1:]
+        
+        # Then the age (index 0) is converted to an integer.
+        
+        user_info[0] = int(user_info[0])
+        
+        # Then the dictionary for the user is created, using the template list
+        # for keys and user_info for values.
+        
+        user_dict = dict(zip(template, user_info))
+        
+        # The user_dict is appended to user_list and the next line retrieved.
+
+        user_list.append(user_dict)
+        line=file.readline().rstrip()
+
+    file.close()
+    return user_list
+
+
+def createMovieList():
+    '''
+        ()->list(dict)
+        
+        Reads from the file u.item and returns a list containing all of the info
+        pertaining to movies in the file.
+
+        >>>movie_list=createMovieList()
+        >>>print movie_list
+        >>>
+
+    '''
+
+    movie_list=[]
+    template=["title", "release date", "video release date",
+                "IMDB url", "genre"]
+    file = open("u.item", "r")
+    line = file.readline().rstrip()
+    while line:
+        movie_info = line.split("|")[1:]
+        genres = map(int, movie_info[4:])
+        
+        # The multiple genre elements of movie_info are replace with one list
+        movie_info[4:] = [genres]
+        
+        movie_dict = dict(zip(template, movie_info))
+        
+        # The movie_dict is appended to the movie_list and next line retrieved.
+        movie_list.append(movie_dict)
+        line = file.readline().rstrip()
+    file.close()
+    return movie_list
+
+def createRatingsList(numUsers, numMovies):
+    '''
+
+    (int,int)->(list,list)
+    
+     Reads from the file u.data and returns two lists containing all 100,000
+     ratings provided in the file.  rLu contains one element per user, with
+     that element containing all ratings from that user.  Same with rLm, but
+     each element contains all ratings for that movie.
+
+     >>>rlu,rlm=createRatingsList(943,1682)
+     >>>print rlu
+     >>>print rlm
+
+    '''
+    
+    # First rLu is initialized to a list full of empty dictionaries.
+    rLu = []
+    for i in range(numUsers):
+        rLu.append({})
+    
+    # Then rLm is initialized the same way.    
+    rLm = []
+    for i in range(numMovies):
+        rLm.append({})
+    f = open("u.data", "r")
+    line = f.readline().rstrip()
+    while line:
+        userID, itemID, rating, time = map(int, line.split("\t"))
+        rLu[userID - 1][itemID] = rating
+        rLm[itemID - 1][userID] = rating
+        line = f.readline().rstrip()
+    f.close()
+    return rLu, rLm
+
+
+def createGenreList():
+
+    '''
+    ()->list
+
+    Reads from the file u.genre and returns a list of genres in order.
+
+    >>>genre_list=createGenreList()
+    >>>print genre_list
+
+    '''
+    
+    genre_list = []   # Initializes the genre list.
+    f = open("u.genre", "r")
+    line = f.readline().rstrip()
+    while line:
+        # For every line, the line is split into a list, with element 0 being
+        # the genre.  This is then appended to the genre_list.
+        genre = line.split("|")[0]
+        genre_list.append(genre)
+        line = f.readline().rstrip()
+    return genre_list
+
+'''
+
+After the successful creation of these data structures we perform some tests on this
+data structures like meanMovieRating,meanRating given by any user and many more
+
+'''
+ 
+def meanUserRating(userId, userRatings):
+    
+    '''
+
+    (int,list)->int
+    
+    Returns the mean rating provided by user with id u.
+    >>>ratings=meanUserRating(24,userRating)
+    >>>
+
+    '''
+    ratings = userRatings[userId - 1].values()
+    return getMean(ratings)
+
+     
+def meanMovieRating(movieId, movieRatings):
+
+    '''
+    (int,list)->int
+
+    Returns the mean rating received by a movie with id u
+    >>>mean=meanMovieRating(56,movieRating)
+    >>>print mean
+
+    '''
+     
+    ratings = movieRatings[movieId - 1].values()
+    return getMean(ratings)
+
+
+def moviesInGenre(genre, movieList):
+
+    '''
+
+    (str,list)->list
+
+    Given a genre ID and a movie list, this function returns the list
+    of all movies
+    >>>movies=moviesInGenre(romantic,movieList)
+    >>>print movies
+
+    '''
+    movie_titles = []
+    for movie in movieList:
+        # movie["genre"] is a list, and movie["genre"][genre] is either 1 
+        # (if the movie is in that genre) or 0 (movie not in genre).
+        in_genre = movie["genre"][genre]
+        if in_genre:
+            movie_titles.append(movie["title"])
+    movie_titles.sort()
+    return movie_titles
+
+#Helper Functions
+def getMean(L):
+    # Gets the mean as a float of a list L
+    mean = float(sum(L))/float(len(L))
+    return mean
+
+#Test of all functions mentioned above
+
+def main():
+    rLu, rLm = createRatingsList(943, 1682)
+    #print rLm
+    userList = createUserList()
+    movieList = createMovieList()
+    #print movieList
+    genreList = createGenreList()
+    #print genreList
+    #print meanMovieRating(56,rLm)
+    print rLm
+  
+
+
+if __name__ == '__main__':
+    main()
+
+
+
+
+
+
+
+
+
+
+
+
